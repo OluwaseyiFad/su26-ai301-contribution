@@ -1,4 +1,4 @@
-# Contribution [#]: [Issue Title]
+# Contribution 1: Integration test for OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_LEGACY_SOURCES
 
 **Contribution Number:** 1  
 **Student:** Oluwaseyi Fadahunsi
