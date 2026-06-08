@@ -1,15 +1,17 @@
 # Contribution [#]: [Issue Title]
 
-**Contribution Number:** [1 / 2 / 3]  
-**Student:** [Your Name]  
-**Issue:** [GitHub issue link]  
-**Status:** [Phase I / Phase II / Phase III / Phase IV] [In Progress / Complete]
+**Contribution Number:** 1  
+**Student:** Oluwaseyi Fadahunsi
+**Issue:** [GitHub issue link](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/issues/2185)  
+**Status:** Phase I
 
 ---
 
 ## Why I Chose This Issue
 
-[1-2 paragraphs explaining why this issue interests you, how it matches your skills/learning goals, what you hope to learn]
+I chose this issue because it is a focused way to contribute to OpenTelemetry without starting with a very large feature. It matches my interest in observability, testing, and understanding how .NET auto-instrumentation works in real projects.
+
+I also want to improve my C#/.NET skills and learn how OpenTelemetry tests trace behavior end-to-end.
 
 ---
 
