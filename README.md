@@ -54,9 +54,21 @@ The feature works at runtime, but nothing guards it. A search of `test/Integrati
 
 ### Steps to Reproduce
 
-1. [Step 1]
-2. [Step 2]
-3. [Observed result]
+Because this is a *missing-test* issue, reproduction means demonstrating that (a) the feature works only when the variable is set, and (b) no test currently guards it. This was done **locally, outside the repo** (in `/tmp`) so the feature branch carries only submittable work.
+
+1. Fork & clone `open-telemetry/opentelemetry-dotnet-instrumentation`; install prerequisites: .NET 8 & 9 SDKs — **plus .NET 10 SDK** (required by the pinned `nuke` 10.1.0 tool), Docker, and Xcode Command Line Tools.
+2. Build the instrumentation: `dotnet tool restore && dotnet nuke BuildTracer` → produces `bin/tracer-home`.
+3. In a scratch directory, create a minimal console app that emits one **legacy** activity:
+   ```csharp
+   using var activity = new Activity("ManualSpan");
+   activity.Start();
+   activity.Stop();
+   ```
+4. Run it instrumented with the console exporter — `OTEL_DOTNET_AUTO_HOME=bin/tracer-home`, `OTEL_TRACES_EXPORTER=console`, `OTEL_DOTNET_AUTO_LOG_DIRECTORY=/tmp/otel-logs` (the default `/var/log/opentelemetry` isn't writable on macOS) — **with** `OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_LEGACY_SOURCES=ManualSpan`.
+   → The `ManualSpan` span **is exported** (`Activity.DisplayName: ManualSpan`, `TraceFlags: Recorded`, empty instrumentation scope name).
+5. Run it again **without** that variable.
+   → The span is **not exported** (the app reports `Recorded=False`; no `Activity.*` output).
+6. From the repo root, `grep -rn "ADDITIONAL_LEGACY_SOURCES\|AddLegacySource" test/IntegrationTests/` → **no matches**, confirming the test gap that #2185 asks to close.
 
 ### Reproduction Evidence
 
