@@ -3,7 +3,7 @@
 **Contribution Number:** 1  
 **Student:** Oluwaseyi Fadahunsi
 **Issue:** [GitHub issue link](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/issues/2185)  
-**Status:** Phase I
+**Status:** Phase II
 
 ---
 
@@ -60,9 +60,14 @@ The feature works at runtime, but nothing guards it. A search of `test/Integrati
 
 ### Reproduction Evidence
 
-- **Commit showing reproduction:** [Link to commit in your fork]
-- **Screenshots/logs:** [If applicable]
-- **My findings:** [What you discovered during reproduction]
+- **Commit showing reproduction:** https://github.com/OluwaseyiFad/opentelemetry-dotnet-instrumentation/commit/41564b9b96dfc0e00e433b1b2003e979a349afd5
+- **Screenshots/logs:** Console-exporter output captured during reproduction —
+  - **With** the env var: `Activity.DisplayName: ManualSpan`, `Activity.TraceFlags: Recorded`, `Instrumentation scope (ActivitySource): Name:` *(empty)*, and the app prints `recorded=True`.
+  - **Without** the env var: only `[app] emitted legacy activity 'ManualSpan', recorded=False`; no span exported.
+- **My findings:**
+  - The variable directly gates collection: legacy activity → exported **iff** its name is listed.
+  - **Legacy spans export under an *empty* instrumentation scope name** (not a named `ActivitySource`). This dictates the assertion: `collector.Expect("", span => span.Name == "ManualSpan")`.
+  - The non-legacy `ADDITIONAL_SOURCES` variant *is* already integration-tested (e.g. `SmokeTests.cs`), giving a clear pattern to mirror.
 
 ---
 
@@ -80,20 +85,22 @@ Add a dedicated integration test that mirrors the existing `OTEL_DOTNET_AUTO_TRA
 
 Using UMPIRE framework (adapted):
 
-**Understand:** [Restate the problem]
+**Understand:** Provide automated integration coverage for `OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_LEGACY_SOURCES`, which registers legacy `Activity` sources via `AddLegacySource`. Confirmed by reproduction that the feature works and is currently untested.
 
-**Match:** [What similar patterns/solutions exist in the codebase?]
+**Match:** The non-legacy variant is already covered. `SmokeTests.cs` (in `test/IntegrationTests`) shows the pattern: a `TestHelper`-derived class sets `OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_SOURCES`, calls `RunTestApplication()`, and asserts spans with `MockSpansCollector.Expect(...)`. Test apps live under `test/test-applications/integrations/TestApplication.*` and are registered in `OpenTelemetry.AutoInstrumentation.sln`.
 
-**Plan:** [Step-by-step implementation plan]
-1. [Modify file X to do Y]
-2. [Add function Z]
-3. [Update tests]
+**Plan:**
+1. Add test app `test/test-applications/integrations/TestApplication.TracesLegacySource/` (minimal `Program.cs` emitting `new Activity("ManualSpan")` + `.csproj`).
+2. Register the new app project in `OpenTelemetry.AutoInstrumentation.sln`.
+3. Add `LegacySourcesTests : TestHelper` in `test/IntegrationTests/` that sets `OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_LEGACY_SOURCES`, runs the app, and asserts `collector.Expect("", span => span.Name == "ManualSpan")` (empty scope name — confirmed during reproduction).
+4. (Stretch) Add a negative assertion: with the var unset, the legacy span is not collected.
+5. Update `CHANGELOG.md`.
 
-**Implement:** [Link to your branch/commits as you work]
+**Implement:** https://github.com/OluwaseyiFad/opentelemetry-dotnet-instrumentation/tree/add-legacy-sources-integration-test
 
-**Review:** [Self-review checklist - does it follow the project's contribution guidelines?]
+**Review:** Self-check against `docs/CONTRIBUTING.md` — single concern, CHANGELOG updated, CLA signed, opened as draft PR; `dotnet nuke` build + format clean.
 
-**Evaluate:** [How will you verify it works?]
+**Evaluate:** New test passes via `dotnet nuke ManagedTests` and fails if `AddLegacySource` wiring is removed (verifying it actually guards the feature).
 
 ---
 
