@@ -3,7 +3,7 @@
 **Contribution Number:** 1  
 **Student:** Oluwaseyi Fadahunsi
 **Issue:** [GitHub issue link](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/issues/2185)  
-**Status:** Phase II
+**Status:** Phase III — PR submitted and ready for review ([#5202](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/pull/5202)); awaiting maintainer CI approval + review
 
 ---
 
@@ -120,14 +120,25 @@ Using UMPIRE framework (adapted):
 
 ### Unit Tests
 
-- [ ] Test case 1: [Description]
-- [ ] Test case 2: [Description]
-- [ ] Test case 3: [Description]
+Not applicable — this is end-to-end behavior driven by an environment variable and the
+auto-instrumentation profiler, which a unit test cannot exercise. Coverage is provided
+through integration tests (matching how the non-legacy `ADDITIONAL_SOURCES` variant is tested).
 
 ### Integration Tests
 
-- [ ] Integration scenario 1
-- [ ] Integration scenario 2
+New class `LegacySourcesTests : TestHelper` in `test/IntegrationTests/LegacySourcesTests.cs`,
+backed by a new minimal test app `TestApplication.TracesLegacySource` that emits one legacy
+activity via `new Activity("ManualSpan")`:
+
+- [x] **Positive — `SubmitsLegacyActivityWhenSourceIsRegistered`:** with
+  `OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_LEGACY_SOURCES=ManualSpan`, the span is exported
+  under the empty instrumentation scope name (`collector.Expect(string.Empty, span => span.Name == "ManualSpan")`).
+- [x] **Negative — `DoesNotSubmitLegacyActivityWhenSourceIsNotRegistered`:** with the variable
+  unset, no span is collected (`collector.AssertEmpty()`).
+
+The positive/negative pairing is the regression guard: it proves collection is *gated* by the
+variable, so a break in the `AddLegacySource` wiring (in `EnvironmentConfigurationTracerHelper.cs`)
+would make the positive test fail.
 
 ### Manual Testing
 
@@ -147,23 +158,37 @@ Using UMPIRE framework (adapted):
 
 ### Code Changes
 
-- **Files modified:** [List]
-- **Key commits:** [Links to important commits]
-- **Approach decisions:** [Why you chose certain approaches]
+- **Files added:**
+  - `test/test-applications/integrations/TestApplication.TracesLegacySource/Program.cs` — emits one legacy `new Activity("ManualSpan")`.
+  - `test/test-applications/integrations/TestApplication.TracesLegacySource/TestApplication.TracesLegacySource.csproj` — minimal SDK project (TFMs/OutputType/Platforms inherited from `Integrations.props`).
+  - `test/IntegrationTests/LegacySourcesTests.cs` — positive + negative integration tests.
+- **Files modified:**
+  - `OpenTelemetry.AutoInstrumentation.sln` — registered the new test app (project declaration, per-config platform rows, and `integrations` solution-folder nesting). Required because the nuke build discovers test apps from the solution.
+- **Approach decisions:**
+  - **Mirrored the existing `ADDITIONAL_SOURCES` pattern** (`SmokeTests` + `TestHelper` + `MockSpansCollector`) so the new test fits repo conventions.
+  - **Empty scope-name assertion** (`Expect(string.Empty, …)`): legacy activities export with no `ActivitySource`, confirmed during Phase II reproduction.
+  - **Added a negative test** so the pair proves the variable actually gates collection.
+
+### Verification
+
+- **Cross-TFM end-to-end** (real profiler + mock OTLP collector), 2/2 passing on each non-Windows target: `net8.0`, `net9.0`, `net10.0`. (`net462` is Windows-only — left to CI.)
+- **Mutation test:** disabling the `AddLegacySource` wiring in `EnvironmentConfigurationTracerHelper.cs` (then rebuilding + swapping the managed assembly into `bin/tracer-home`) made the **positive** test fail while the **negative** test still passed — proving the test genuinely guards the feature. Reverted afterward; working tree left clean.
 
 ---
 
 ## Pull Request
 
-**PR Link:** [GitHub PR URL when submitted]
+**PR Link:** https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/pull/5202
 
-**PR Description:** [Draft or final PR description - much of the content above can be adapted]
+**PR Description:** 
+- **Why:** the legacy-sources env var is wired through `AddLegacySource` but has no integration coverage; a regression would ship undetected. `Fixes #2185`.
+- **What:** new `TestApplication.TracesLegacySource` (emits one legacy `Activity`), new `LegacySourcesTests` (positive + negative), and solution registration.
 
 **Maintainer Feedback:**
 - [Date]: [Summary of feedback received]
 - [Date]: [How you addressed it]
 
-**Status:** [Awaiting review / Iterating / Approved / Merged]
+**Status:** Awaiting review
 
 ---
 
